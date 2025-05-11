@@ -1876,7 +1876,7 @@ Want a
 if custom_output_file == "false":
     pass
 elif custom_output_file:
-    filename = custom_output_file
+    filename = os.path.expanduser(custom_output_file)
 else:
     filename = ".html"
     if date_mode:
@@ -1884,14 +1884,14 @@ else:
     if block_mode:
         filename = "UTXOracle_"+str(block_start_num)+"-"+str(block_finish_num)+filename
 
-
-    # Write file locally and serve to browser
-    import webbrowser
+# Write file locally and serve to browser if we have a filename
+if filename and filename != "false":
     with open(filename, "w") as f:
         f.write(html_content)
 
     # Open browser only in interactive mode
     if interactive_mode:
+        import webbrowser
         webbrowser.open('file://' + os.path.realpath(filename))
         conditional_print(f"\nOpened {filename} in your browser.")
     else:
