@@ -71,4 +71,4 @@ All patches maintain backward compatibility with the original UTXOracle function
 
 The UTXOracle scripts included in this repository for convenience are licensed under their own license, included in the script.
 
-The rest of this repository is licensed per [LICENSE.md](./LICENSE.md).
+The rest of this repository is licensed per [LICENSE](./LICENSE).
