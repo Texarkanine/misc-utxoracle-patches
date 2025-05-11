@@ -116,10 +116,10 @@ Options:
   -d YYYY/MM/DD    Specify a UTC date to evaluate
   -p /path/to/dir  Specify the data directory for blk files
   -rb              Use last 144 recent blocks instead of date mode
-  -conf            Specify the Bitcoin configuration file location
-  -output          Specify the output HTML file name
-  -noninteractive  Run in non-interactive mode (no browser, no prompts)
-  -template        Specify a custom HTML template file
+  -c               Specify the Bitcoin configuration file location
+  -o               Specify the output HTML file name
+  -n               Run in non-interactive mode (no browser, no prompts)
+  -t               Specify a custom HTML template file
 """
     print(help_text)
     sys.exit(0)
@@ -146,25 +146,25 @@ if "-rb" in sys.argv:
     block_mode = True
 
 #did user specify non-interactive mode?
-if "-noninteractive" in sys.argv:
+if "-n" in sys.argv:
     interactive_mode = False
 
 #did user specify a custom output file?
-if "-output" in sys.argv:
-    output_index = sys.argv.index("-output")
+if "-o" in sys.argv:
+    output_index = sys.argv.index("-o")
     if output_index + 1 < len(sys.argv):
         custom_output_file = sys.argv[output_index + 1]
 
 #did user specify a custom bitcoin config file?
-if "-conf" in sys.argv:
-    conf_index = sys.argv.index("-conf")
+if "-c" in sys.argv:
+    conf_index = sys.argv.index("-c")
     if conf_index + 1 < len(sys.argv):
         bitcoin_conf_path = sys.argv[conf_index + 1]
 
 #did user specify a custom HTML template?
 custom_template_path = None
-if "-template" in sys.argv:
-    template_index = sys.argv.index("-template")
+if "-t" in sys.argv:
+    template_index = sys.argv.index("-t")
     if template_index + 1 < len(sys.argv):
         custom_template_path = sys.argv[template_index + 1]
 
