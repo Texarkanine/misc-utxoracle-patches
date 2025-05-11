@@ -1874,11 +1874,7 @@ Want a
 
 # name the file with dates or blocks
 if custom_output_file == "false":
-    # Skip HTML generation when output is set to false
-    if silent_mode:
-        print(int(central_price))
-    else:
-        conditional_print(f"\nSkipping HTML output as requested. Price: ${int(central_price):,}")
+    pass
 else:
     if custom_output_file and custom_output_file != "true":
         filename = custom_output_file
