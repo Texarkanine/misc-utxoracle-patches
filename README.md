@@ -1,6 +1,6 @@
 # UTXOracle Patches
 
-This repository contains patches for the UTXOracle Bitcoin price oracle script.
+This repository contains patches for the [UTXOracle Bitcoin price oracle script](https://utxo.live).
 
 ## User Guide
 
@@ -67,3 +67,9 @@ cp UTXOracle.py.backup UTXOracle.py
   - Improved error handling to use proper exit codes
 
 All patches maintain backward compatibility with the original UTXOracle functionality.
+
+## License
+
+The UTXOracle scripts included in this repository for convenience are licensed under their own license, included in the script.
+
+The rest of this repository is licensed per [LICENSE.md](./LICENSE.md).
