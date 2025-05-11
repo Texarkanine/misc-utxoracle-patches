@@ -8,7 +8,6 @@ This repository contains patches for the [UTXOracle Bitcoin price oracle script]
 
 1. **Find your UTXOracle version:**
    - Open your UTXOracle.py file and look near the top for version information
-   - The version will be in the format `UTXOracle.X.py` where X is the version number
 
 2. **Download the appropriate patch:**
    - Find the latest release on the [Releases page](https://github.com/username/misc-utxoracle-patches/releases)
