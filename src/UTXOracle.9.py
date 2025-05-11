@@ -1,3 +1,4 @@
+
 #########################################################################################  
 #                                                                                       #
 #   /$$   /$$ /$$$$$$$$ /$$   /$$  /$$$$$$                               /$$            #
@@ -72,17 +73,9 @@
 
 ###############################################################################  
 
-# Define a function to print only if not in silent mode
-def conditional_print(message, end="\n", flush=False):
-    if not silent_mode:
-        print(message, end=end, flush=flush)
-
-# Define a function for error messages that always prints to stderr
-def error_print(message, end="\n"):
-    print(message, end=end, file=sys.stderr, flush=True)
-
 # print the current version and disable warnings
 import warnings
+print("\nUTXOracle version 9.0")
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # set platform dependent data paths and clear terminal
@@ -109,10 +102,6 @@ block_finish_num = 0
 block_nums_needed = []
 block_hashes_needed = []
 block_times_needed = []
-interactive_mode = True
-silent_mode = False
-custom_output_file = None
-bitcoin_conf_path = None
 
 #print help text for the user if needed
 import sys
@@ -125,11 +114,6 @@ Options:
   -d YYYY/MM/DD    Specify a UTC date to evaluate
   -p /path/to/dir  Specify the data directory for blk files
   -rb              Use last 144 recent blocks instead of date mode
-  -c               Specify the Bitcoin configuration file location
-  -o               Specify the output HTML file name
-  -n               Run in non-interactive mode (no browser, no prompts)
-  -t               Specify a custom HTML template file
-  -s               Silent mode - output only the final price
 """
     print(help_text)
     sys.exit(0)
@@ -155,56 +139,25 @@ if "-rb" in sys.argv:
     date_mode = False
     block_mode = True
 
-#did user specify non-interactive mode?
-if "-n" in sys.argv:
-    interactive_mode = False
-
-#did user specify silent mode?
-if "-s" in sys.argv:
-    silent_mode = True
-    
-#did user specify a custom output file?
-if "-o" in sys.argv:
-    output_index = sys.argv.index("-o")
-    if output_index + 1 < len(sys.argv):
-        custom_output_file = sys.argv[output_index + 1]
-
-#did user specify a custom bitcoin config file?
-if "-c" in sys.argv:
-    conf_index = sys.argv.index("-c")
-    if conf_index + 1 < len(sys.argv):
-        bitcoin_conf_path = sys.argv[conf_index + 1]
-
-#did user specify a custom HTML template?
-custom_template_path = None
-if "-t" in sys.argv:
-    template_index = sys.argv.index("-t")
-    if template_index + 1 < len(sys.argv):
-        custom_template_path = sys.argv[template_index + 1]
-
-conditional_print("\nUTXOracle version 9.0")
-
 # Validate bitcoin.conf in data_dir
-if bitcoin_conf_path:
-    conf_path = bitcoin_conf_path
-else:
-    conf_path = os.path.join(data_dir, "bitcoin.conf")
-
+conf_path = os.path.join(data_dir, "bitcoin.conf")
 if not os.path.exists(conf_path):
-    error_print(f"Invalid Bitcoin configuration file: {conf_path}")
-    error_print("Please provide a valid Bitcoin configuration file.")
+    print(f"Invalid Bitcoin data directory: {data_dir}")
+    print("Expected to find 'bitcoin.conf' in this directory.")
     sys.exit(1)
 
 #parse the conf file for the blocks dir and rpc credentials
+conf_path = os.path.join(data_dir, "bitcoin.conf")
 conf_settings = {}
-with open(conf_path, 'r') as f:
-    for line in f:
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" in line:
-            key, value = line.split("=", 1)
-            conf_settings[key.strip()] = value.strip().strip('"')
+if os.path.exists(conf_path):
+    with open(conf_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, value = line.split("=", 1)
+                conf_settings[key.strip()] = value.strip().strip('"')
 
 # Set blocks directory from default or user specified
 blocks_dir = os.path.expanduser(conf_settings.get("blocksdir", os.path.join(data_dir, "blocks")))
@@ -214,22 +167,6 @@ bitcoin_cli_options = []
 if "rpcuser" in conf_settings and "rpcpassword" in conf_settings:
     bitcoin_cli_options.append(f"-rpcuser={conf_settings['rpcuser']}")
     bitcoin_cli_options.append(f"-rpcpassword={conf_settings['rpcpassword']}")
-elif "rpcauth" in conf_settings:
-    # Extract username from rpcauth entry
-    rpcauth_line = conf_settings["rpcauth"]
-    username = rpcauth_line.split(":")[0] if ":" in rpcauth_line else None
-    
-    if username:
-        # Check if password is provided as an environment variable
-        import os
-        rpc_password = os.environ.get("BITCOIN_RPC_PASSWORD")
-        
-        if rpc_password:
-            bitcoin_cli_options.append(f"-rpcuser={username}")
-            bitcoin_cli_options.append(f"-rpcpassword={rpc_password}")
-        else:
-            error_print("WARNING: Bitcoin node is using rpcauth authentication, but BITCOIN_RPC_PASSWORD environment variable is not set.")
-            error_print("Set this environment variable to the RPC password for authentication.")
 else:
     cookie_path = conf_settings.get("rpccookiefile", os.path.join(data_dir, ".cookie"))
     if os.path.exists(cookie_path):
@@ -254,8 +191,8 @@ for opt in ["rpcconnect", "rpcport"]:
 # where it is needed. If you get an error in this function, the problem is 
 # likely that you don't have server=1 in your bitcoin conf file.
 
-conditional_print("\nCurrent operation  \t\t\t\tTotal Completion",flush=True)
-conditional_print("\nConnecting to node...\t\t\t\t", end="",flush=True)
+print("\nCurrent operation  \t\t\t\tTotal Completion",flush=True)
+print("\nConnecting to node...\t\t\t\t", end="",flush=True)
 
 # define the node communication function
 import subprocess
@@ -267,13 +204,13 @@ def Ask_Node(command):
         #subprocess.run('echo "\\033]0;UTXOracle\\007"', shell=True)
         return rv
     except Exception as e:
-        error_print("Error connecting to your node. Troubleshooting steps:")
-        error_print("\t1) Make sure bitcoin-cli is working: try 'bitcoin-cli getblockcount'")
-        error_print("\t2) Make sure bitcoind is running (and server=1 in bitcoin.conf)")
-        error_print("\t3) If needed, set rpcuser/rpcpassword or point to the .cookie file")
-        error_print("\nThe full command was: " + " ".join(full_command))
-        error_print("\nThe error from bitcoin-cli was:\n" + str(e))
-        sys.exit(1)
+        print("Error connecting to your node. Troubleshooting steps:\n")
+        print("\t1) Make sure bitcoin-cli is working: try 'bitcoin-cli getblockcount'")
+        print("\t2) Make sure bitcoind is running (and server=1 in bitcoin.conf)")
+        print("\t3) If needed, set rpcuser/rpcpassword or point to the .cookie file")
+        print("\nThe full command was:", " ".join(full_command))
+        print("\nThe error from bitcoin-cli was:\n", e)
+        sys.exit()
 
 
 
@@ -324,7 +261,7 @@ latest_price_date = latest_price_day.strftime("%Y-%m-%d")
 
 
 #print completion update
-conditional_print("5% done",flush=True)
+print("5% done",flush=True)
 
 
 
@@ -356,19 +293,20 @@ if date_mode:
             #make sure this date is less than the max date
             datetime_entered = datetime(year,month,day,0,0,0,tzinfo=timezone.utc)
             if datetime_entered.timestamp() >= latest_utc_midnight.timestamp():
-                error_print("\nDate is after the latest available. We need 6 blocks after UTC midnight.")
-                error_print("Run UTXOracle.py -rb for the most recent blocks")
-                sys.exit(1)
+                print("\nDate is after the latest avaiable. We need 6 blocks after UTC midnight.")
+                print("Run UTXOracle.py -rb for the most recent blocks")
+                
+                sys.exit()
             
             #make sure this date is after the min date
             dec_15_2023 = datetime(2023,12,15,0,0,0,tzinfo=timezone.utc)
             if datetime_entered.timestamp() < dec_15_2023.timestamp():
-                error_print("\nThe date entered is before 2023-12-15, please try again")
-                sys.exit(1)
+                print("\nThe date entered is before 2023-12-15, please try again")
+                sys.exit()
         
         except:
-            error_print("\nError interpreting date. Please try again. Make sure format is YYYY/MM/DD")
-            sys.exit(1)
+            print("\nError interpreting date. Please try again. Make sure format is YYYY/MM/DD")
+            sys.exit()
     
     
     #get the seconds and printable date string of date entered
@@ -408,7 +346,7 @@ def get_day_of_month(time_in_seconds):
 #if block mode add the blocks and hashes to a list
 if block_mode:
     
-    conditional_print("\nFinding the last 144 blocks",flush=True)
+    print("\nFinding the last 144 blocks",flush=True)
     
     #get the last block number of the day
     block_finish_num = block_count
@@ -422,7 +360,7 @@ if block_mode:
         
         #print update
         if (block_num-block_start_num)/144*100 > print_every and print_every < 100:
-            conditional_print(str(print_every)+"%..",end="",flush=True)
+            print(str(print_every)+"%..",end="",flush=True)
             print_every += 20
         block_nums_needed.append(block_num)
         block_hashes_needed.append(hash_end)
@@ -430,13 +368,13 @@ if block_mode:
         block_num += 1
         time_in_seconds, hash_end = get_block_time(block_num)
         
-    conditional_print("100%\t\t\t25% done",flush=True)
+    print("100%\t\t\t25% done",flush=True)
 
 #if date mode search for all the blocks on this day
 elif date_mode:
     
-    conditional_print("\nFinding all blocks on "+datetime_entered.strftime("%b %d, %Y"),flush=True)
-    conditional_print("0%..",end="", flush=True)
+    print("\nFinding all blocks on "+datetime_entered.strftime("%b %d, %Y"),flush=True)
+    print("0%..",end="", flush=True)
     #first estimate of the block height of the price day
     seconds_since_price_day = latest_time_in_seconds - price_day_seconds
     blocks_ago_estimate = round(144*float(seconds_since_price_day)/float(seconds_in_a_day))
@@ -446,7 +384,7 @@ elif date_mode:
     time_in_seconds, hash_end = get_block_time(price_day_block_estimate) 
     
     #get new block estimate from the seconds difference using 144 blocks per day
-    conditional_print("20%..",end="",flush=True)
+    print("20%..",end="",flush=True)
     seconds_difference = time_in_seconds - price_day_seconds
     block_jump_estimate = round(144*float(seconds_difference)/float(seconds_in_a_day))
     
@@ -454,7 +392,7 @@ elif date_mode:
     last_estimate = 0
     last_last_estimate = 0
     
-    conditional_print("40%..",end="",flush=True)
+    print("40%..",end="",flush=True)
     while block_jump_estimate >6 and block_jump_estimate != last_last_estimate:
         
         #when we oscillate around the correct block, last_last_estimate = block_jump_estimate
@@ -469,7 +407,7 @@ elif date_mode:
         seconds_difference = time_in_seconds - price_day_seconds
         block_jump_estimate = round(144*float(seconds_difference)/float(seconds_in_a_day))
     
-    conditional_print("60%..",end="",flush=True)
+    print("60%..",end="",flush=True)
     #the oscillation may be over multiple blocks so we add/subtract single blocks 
     #to ensure we have exactly the first block of the target day
     if time_in_seconds > price_day_seconds:
@@ -493,7 +431,7 @@ elif date_mode:
             price_day_block_estimate = price_day_block_estimate+1
             time_in_seconds, hash_end = get_block_time(price_day_block_estimate) 
     
-    conditional_print("80%..",end="",flush=True)
+    print("80%..",end="",flush=True)
     #assign the estimate as the price day block since it is correct now    
     price_day_block = price_day_block_estimate
     
@@ -506,8 +444,8 @@ elif date_mode:
     time_in_seconds, hash_end = get_block_time(price_day_block_end)
     day2 = get_day_of_month(time_in_seconds)
     
-    conditional_print("100%\t\t\t25% done",flush=True)
-    conditional_print("\nDetermining the correct order of blocks",flush=True)
+    print("100%\t\t\t25% done",flush=True)
+    print("\nDetermining the correct order of blocks",flush=True)
     
     #load block nums and hashes needed
     block_num = 0
@@ -518,7 +456,7 @@ elif date_mode:
         block_num+=1
         if block_num/144 * 100 > print_next:
             if print_next < 100:
-                conditional_print(str(print_next)+"%..",end="",flush=True)
+                print(str(print_next)+"%..",end="",flush=True)
                 print_next +=20
         
         #append needed block
@@ -531,14 +469,14 @@ elif date_mode:
     
     #complete print update status
     while print_next<100:
-        conditional_print(str(print_next)+"%..",end="",flush=True)
+        print(str(print_next)+"%..",end="",flush=True)
         print_next +=20
     
     #set start and end block numbers
     block_start_num = price_day_block
     block_finish_num = price_day_block_end
 
-    conditional_print("100%\t\t\t50% done",flush=True)
+    print("100%\t\t\t50% done",flush=True)
 
 
 
@@ -551,7 +489,7 @@ elif date_mode:
 # In this section we find the byte-wise location of all the block data
 # that we need in terms of where it's stored on the user's hard drive
 
-conditional_print("\nMaping block locations in raw block files",flush=True)
+print("\nMaping block locations in raw block files",flush=True)
 
 # standard variables for block readind and estiamted blocks per binary .blk file
 blocks_per_file=50 #generous, likely much more
@@ -589,7 +527,7 @@ for blk_file in blk_files:
     block_file_num+=1
     if block_file_num/(end_blk_index_est-start_blk_index)*100 > print_next:
         if print_next < 100:
-            conditional_print(str(print_next)+"%..",end="",flush=True)
+            print(str(print_next)+"%..",end="",flush=True)
             print_next +=20
     
     #read the blk file
@@ -637,13 +575,13 @@ for blk_file in blk_files:
 
 # error if all blocks found, if good print progress update
 if len(found_blocks) != len(block_hashes_needed):
-    error_print("Error: Reached end of blk files without finding all target blocks.")
-    sys.exit(1)
+    print("Error: Reached end of blk files without finding all target blocks.")
+    sys.exit()
 else:
     while print_next<100:
-        conditional_print(str(print_next)+"%..",end="",flush=True)
+        print(str(print_next)+"%..",end="",flush=True)
         print_next +=20
-    conditional_print("100% \t\t\t75% done",flush=True)
+    print("100% \t\t\t75% done",flush=True)
 
 
 
@@ -714,7 +652,7 @@ for n in range(0,number_of_bins):
 # greater than 5 inputs, greater than 2 outputs, only one output, has op_return,
 # has witness data > 500 bytes, and has an input created on the same day.
 
-conditional_print("\nLoading every transaction from every block",flush=True)
+print("\nLoading every transaction from every block",flush=True)
 
 #shortcut for reading bytes of data from the block file
 import struct
@@ -822,7 +760,7 @@ for block_hash, meta in found_blocks.items():
     
     #print progress update
     if block_num/len(block_nums_needed)*100 > print_next:
-        conditional_print(str(print_next)+"%..",end="", flush=True)
+        print(str(print_next)+"%..",end="", flush=True)
         print_next +=20
     
     #get the location of the block on the hard drive
@@ -957,7 +895,7 @@ for block_hash, meta in found_blocks.items():
             block_heights_dec.append(bkh)
             block_times_dec.append(tm)
                         
-conditional_print("100% \t\t\t95% done",flush=True)
+print("100% \t\t\t95% done",flush=True)
 
             
 
@@ -979,8 +917,8 @@ conditional_print("100% \t\t\t95% done",flush=True)
 # procedures if the sum of the signal integrates to one.
 
 # print update
-conditional_print("\nFinding prices and rendering plot",flush=True)
-conditional_print("0%..",end="",flush=True)
+print("\nFinding prices and rendering plot",flush=True)
+print("0%..",end="",flush=True)
 
 #remove outputs below 10k sat (increased from 1k sat in v6)
 for n in range(0,201):
@@ -1032,7 +970,7 @@ for n in range(201,1601):
         output_bell_curve_bin_counts[n] = 0.008
 
 #print update    
-conditional_print("20%..",end="",flush=True)
+print("20%..",end="",flush=True)
 
 
 
@@ -1219,7 +1157,7 @@ w2 = a2/(a1+a2)
 rough_price_estimate = int(w1*btc_in_usd_best + w2*btc_in_usd_2nd)
 
 # Print update
-conditional_print("40%..",end="",flush=True)
+print("40%..",end="",flush=True)
 
 
 
@@ -1303,7 +1241,7 @@ for i in range (0,len(raw_outputs)):
                 output_blocks.append(b)
                 output_times.append(t)
 
-conditional_print("60%..",end="",flush=True)
+print("60%..",end="",flush=True)
 
 
 
@@ -1385,7 +1323,7 @@ while central_price not in avs:
     dev_pct = av_dev/price_range
 
 #print update
-conditional_print("80%..",end="",flush=True)
+print("80%..",end="",flush=True)
 
 #because price flutucation may exceed bounds, check a wide ranger for the devation
 pct_range_med = .1
@@ -1409,13 +1347,9 @@ price_dn = central_price - ax_range * central_price
 
 
 # print update
-conditional_print("100%\t\t\tdone",flush=True)
+print("100%\t\t\tdone",flush=True)
 if date_mode:
-    conditional_print("\n\n\t\t"+price_day_date_utc+" price: $"+f"{int(central_price):,}\n\n",flush=True)
-
-# If in silent mode, just output the price as a plain number
-if silent_mode:
-    print(int(central_price))
+    print("\n\n\t\t"+price_day_date_utc+" price: $"+f"{int(central_price):,}\n\n",flush=True)
 
 
 
@@ -1500,54 +1434,7 @@ if block_mode:
 
 
 # Write the HTML code for the chart
-html_content = ""
-use_default = True
-
-if custom_template_path and os.path.exists(custom_template_path):
-    try:
-        # Read the custom template
-        with open(custom_template_path, 'r') as template_file:
-            template_content = template_file.read()
-        
-        # Create a namespace for evaluating the f-string
-        namespace = {
-            # Add all necessary variables that might be used in the template
-            'width': width,
-            'height': height,
-            'margin_left': margin_left,
-            'margin_right': margin_right,
-            'margin_top': margin_top,
-            'margin_bottom': margin_bottom,
-            'heights_smooth': heights_smooth,
-            'prices': prices,
-            'heights': heights,
-            'timestamps': timestamps,
-            'xtick_positions': xtick_positions,
-            'xtick_labels': xtick_labels,
-            'plot_title_left': plot_title_left,
-            'plot_title_right': plot_title_right,
-            'bottom_note1': bottom_note1,
-            'bottom_note2': bottom_note2,
-            'avg_price': avg_price,
-            'central_price': central_price,
-            'list': list,
-            'int': int
-        }
-        
-        # Add all global variables to the namespace
-        namespace.update(globals())
-        
-        # Evaluate the template as an f-string
-        html_content = eval(f"f'''{template_content}'''", namespace)
-        use_default = False
-    except Exception as e:
-        error_print(f"Error rendering template: {e}")
-        error_print("Falling back to default template.")
-        use_default = True
-
-# Use the default template if needed
-if use_default:
-    html_content = f'''<!DOCTYPE html>
+html_content = f'''<!DOCTYPE html>
 
 <html>
 <head>
@@ -1873,27 +1760,18 @@ Want a
 
 
 # name the file with dates or blocks
-if custom_output_file:
-    filename = custom_output_file
-else:
-    filename = ".html"
-    if date_mode:
-        filename = "UTXOracle_"+price_date_dash+filename
-    if block_mode:
-        filename = "UTXOracle_"+str(block_start_num)+"-"+str(block_finish_num)+filename
+filename = ".html"
+if date_mode:
+    filename = "UTXOracle_"+price_date_dash+filename
+if block_mode:
+    filename = "UTXOracle_"+str(block_start_num)+"-"+str(block_finish_num)+filename
 
 
 # Write file locally and serve to browser
 import webbrowser
 with open(filename, "w") as f:
     f.write(html_content)
-
-# Open browser only in interactive mode
-if interactive_mode:
-    webbrowser.open('file://' + os.path.realpath(filename))
-    conditional_print(f"\nOpened {filename} in your browser.")
-else:
-    conditional_print(f"\nSaved results to {filename}")
+webbrowser.open('file://' + os.path.realpath(filename))
 
 
 
@@ -1923,24 +1801,24 @@ else:
 #
 # Section 1: Definitions
 #
-# "UTXOracle Local" refers to the open-source software made available by the
+# “UTXOracle Local” refers to the open-source software made available by the
 # author for calculating the 24-hour average confirmed price and the recent
 # 144-block window price using confirmed Bitcoin transactions.
 #
-# "Consensus-Compatible Use" means:
+# “Consensus-Compatible Use” means:
 # - Running UTXOracle Local to generate the daily average confirmed block price
-#   ("UTXOracle Consensus Price"), or
+#   (“UTXOracle Consensus Price”), or
 # - Running UTXOracle Local to generate the price from the most recent 144
-#   confirmed blocks ("UTXOracle Block Window Price"),
+#   confirmed blocks (“UTXOracle Block Window Price”),
 # - Without modifying the filtering or averaging logic that produces those prices.
 #
-# "Live or Real-Time Use" means:
+# “Live or Real-Time Use” means:
 # - Using mempool data,
 # - Using data from fewer than 6 confirmations at the chain tip,
 # - Generating prices that update faster than once per confirmed block,
 # - Producing streamed or pushed data outputs (APIs, trading bots, etc.).
 #
-# "The Author" refers to the creator and copyright holder of UTXOracle, reachable
+# “The Author” refers to the creator and copyright holder of UTXOracle, reachable
 # via Twitter.com or x.com at @SteveSimple.
 #
 # Section 2: Permissions (Consensus-Compatible Use)
@@ -1955,8 +1833,8 @@ else:
 # 4. If you are using UTXOracle Local unmodified to generate the 24-hour average
 #    or the 144-block window price, you must refer to these outputs by their
 #    canonical names:
-#    - "UTXOracle Consensus Price" for the 24-hour average from confirmed blocks
-#    - "UTXOracle Block Window Price" for the average from the most recent 144
+#    - “UTXOracle Consensus Price” for the 24-hour average from confirmed blocks
+#    - “UTXOracle Block Window Price” for the average from the most recent 144
 #      confirmed blocks
 # 5. You may not relabel or rebrand these outputs using alternative names when the
 #    original UTXOracle code remains unmodified for price logic.
@@ -1984,9 +1862,9 @@ else:
 # 1. If you modify the price logic (e.g., change filtering thresholds, averaging
 #    methods, or block selection rules), you must not use the following terms to
 #    describe your output:
-#    - "UTXOracle Consensus Price"
-#    - "UTXOracle Block Window Price"
-#    - Any term incorporating "UTXOracle" to describe the price output
+#    - “UTXOracle Consensus Price”
+#    - “UTXOracle Block Window Price”
+#    - Any term incorporating “UTXOracle” to describe the price output
 # 2. These terms are reserved exclusively for outputs derived from unmodified
 #    consensus-compatible logic as defined by the Author.
 # 3. You may not use the UTXOracle name, logo, or associated branding for any fork
@@ -2000,9 +1878,9 @@ else:
 #    - Operate a trading bot, financial API, or trading-related product;
 #    - Offer a public-facing service under the name UTXOracle.
 # 2. These use cases are reserved exclusively for the Author under the name:
-#    - "UTXOracle Live"
-#    - "UTXOracle Live Price"
-#    - "Live On-Chain Price"
+#    - “UTXOracle Live”
+#    - “UTXOracle Live Price”
+#    - “Live On-Chain Price”
 # 3. To discuss licensing for live or commercial usage, contact the Author.
 #
 # Section 5: Trademark and Branding
@@ -2020,7 +1898,7 @@ else:
 #
 # Section 6: No Warranty
 #
-# This software is provided "as is," without warranty of any kind. The Author shall
+# This software is provided “as is,” without warranty of any kind. The Author shall
 # not be liable for any claims, damages, or losses resulting from its use.
 
 
