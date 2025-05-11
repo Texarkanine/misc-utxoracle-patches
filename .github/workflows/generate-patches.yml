@@ -1,0 +1,67 @@
+name: Generate Patch Files
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:  # Allow manual triggering for testing
+
+jobs:
+  generate-patches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up directories
+        run: |
+          mkdir -p dist
+      
+      - name: Generate patch files
+        run: |
+          # Loop through all files in the src directory
+          for src_file in src/UTXOracle*.py; do
+            if [ -f "$src_file" ]; then
+              # Extract the base filename and version number
+              base_filename=$(basename "$src_file")
+              version_num=$(echo "$base_filename" | sed -E 's/UTXOracle\.([0-9]+)\.py/\1/')
+              
+              # Check if corresponding patched file exists
+              patched_file="patched/$base_filename"
+              if [ -f "$patched_file" ]; then
+                echo "Generating patch for version $version_num..."
+                
+                # Generate the diff as a patch file
+                diff -u "$src_file" "$patched_file" > "dist/$version_num.patch" || true
+                
+                # Check if patch was generated and is not empty
+                if [ -s "dist/$version_num.patch" ]; then
+                  echo "Generated patch file: dist/$version_num.patch"
+                else
+                  echo "No differences found for version $version_num"
+                fi
+              else
+                echo "Patched file not found for $base_filename, skipping."
+              fi
+            fi
+          done
+      
+      - name: Upload patch files as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: patch-files
+          path: dist/*.patch
+      
+      - name: Attach patches to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.patch
+          tag_name: ${{ github.event.release.tag_name }}
+          name: ${{ github.event.release.name }}
+          body: ${{ github.event.release.body }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
