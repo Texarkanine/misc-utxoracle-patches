@@ -9,6 +9,10 @@ on:
         description: 'Release tag name (must exist)'
         required: true
 
+permissions:
+  contents: write    # Required for checkout and modifying releases
+  actions: write     # Required for uploading artifacts
+
 jobs:
   generate-patches:
     runs-on: ubuntu-latest
