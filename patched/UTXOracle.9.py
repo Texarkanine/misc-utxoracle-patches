@@ -1875,15 +1875,14 @@ Want a
 # name the file with dates or blocks
 if custom_output_file == "false":
     pass
+elif custom_output_file:
+    filename = custom_output_file
 else:
-    if custom_output_file and custom_output_file != "true":
-        filename = custom_output_file
-    else:
-        filename = ".html"
-        if date_mode:
-            filename = "UTXOracle_"+price_date_dash+filename
-        if block_mode:
-            filename = "UTXOracle_"+str(block_start_num)+"-"+str(block_finish_num)+filename
+    filename = ".html"
+    if date_mode:
+        filename = "UTXOracle_"+price_date_dash+filename
+    if block_mode:
+        filename = "UTXOracle_"+str(block_start_num)+"-"+str(block_finish_num)+filename
 
 
     # Write file locally and serve to browser
