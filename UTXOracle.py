@@ -1481,34 +1481,52 @@ if block_mode:
 
 
 # Write the HTML code for the chart
+html_content = ""
+use_default = True
+
 if custom_template_path and os.path.exists(custom_template_path):
-    # Read the custom template
-    with open(custom_template_path, 'r') as template_file:
-        html_content = template_file.read()
-    
-    # Format the template with the data
-    html_content = html_content.format(
-        width=width,
-        height=height,
-        margin_left=margin_left,
-        margin_right=margin_right,
-        margin_top=margin_top,
-        margin_bottom=margin_bottom,
-        heights_smooth=list(heights_smooth),
-        prices=list(prices),
-        heights=list(heights),
-        timestamps=list(timestamps),
-        xtick_positions=xtick_positions,
-        xtick_labels=xtick_labels,
-        plot_title_left=plot_title_left,
-        plot_title_right=plot_title_right,
-        bottom_note1=bottom_note1,
-        bottom_note2=bottom_note2,
-        avg_price=avg_price,
-        int=int
-    )
-else:
-    # Use the default template
+    try:
+        # Read the custom template
+        with open(custom_template_path, 'r') as template_file:
+            template_content = template_file.read()
+        
+        # Create a namespace for evaluating the f-string
+        namespace = {
+            # Add all necessary variables that might be used in the template
+            'width': width,
+            'height': height,
+            'margin_left': margin_left,
+            'margin_right': margin_right,
+            'margin_top': margin_top,
+            'margin_bottom': margin_bottom,
+            'heights_smooth': heights_smooth,
+            'prices': prices,
+            'heights': heights,
+            'timestamps': timestamps,
+            'xtick_positions': xtick_positions,
+            'xtick_labels': xtick_labels,
+            'plot_title_left': plot_title_left,
+            'plot_title_right': plot_title_right,
+            'bottom_note1': bottom_note1,
+            'bottom_note2': bottom_note2,
+            'avg_price': avg_price,
+            'central_price': central_price,
+            'list': list,
+            'int': int
+        }
+        
+        # Add all global variables to the namespace
+        namespace.update(globals())
+        
+        # Evaluate the template as an f-string
+        html_content = eval(f"f'''{template_content}'''", namespace)
+        use_default = False
+    except Exception as e:
+        print(f"Error rendering template: {e}")
+        print("Falling back to default template.")
+
+# Use the default template if needed
+if use_default:
     html_content = f'''<!DOCTYPE html>
 
 <html>
