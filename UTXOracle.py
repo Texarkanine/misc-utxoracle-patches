@@ -83,8 +83,6 @@ def error_print(message, end="\n"):
 
 # print the current version and disable warnings
 import warnings
-if not silent_mode:
-    print("\nUTXOracle version 9.0")
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # set platform dependent data paths and clear terminal
@@ -183,6 +181,8 @@ if "-t" in sys.argv:
     template_index = sys.argv.index("-t")
     if template_index + 1 < len(sys.argv):
         custom_template_path = sys.argv[template_index + 1]
+
+conditional_print("\nUTXOracle version 9.0")
 
 # Validate bitcoin.conf in data_dir
 if bitcoin_conf_path:
