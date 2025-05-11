@@ -4,6 +4,14 @@ on:
   release:
     types: [created]
   workflow_dispatch:  # Allow manual triggering for testing
+    inputs:
+      tag_name:
+        description: 'Release tag name (must exist)'
+        required: true
+
+permissions:
+  contents: write    # Required for checkout and modifying releases
+  actions: write     # Required for uploading artifacts
 
 jobs:
   generate-patches:
@@ -48,20 +56,15 @@ jobs:
           done
       
       - name: Upload patch files as artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: patch-files
           path: dist/*.patch
       
       - name: Attach patches to release
-        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.patch
-          tag_name: ${{ github.event.release.tag_name }}
-          name: ${{ github.event.release.name }}
-          body: ${{ github.event.release.body }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
